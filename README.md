@@ -12,7 +12,7 @@ Dado un directorio con imágenes, el script genera automáticamente un archivo `
 
 **Ejemplo de output generado:**
 ```
-saoStyle, The image is a close-up of a young girl's face. She has blonde hair 
+myStyle, The image is a close-up of a young girl's face. She has blonde hair 
 styled in two pigtails on top of her head. She is wearing a white and yellow 
 armored chest piece. A small blue dragon is perched on top of her head...
 ```
@@ -58,18 +58,20 @@ source venv/bin/activate
 ### 3. Instalar dependencias
 
 ```bash
-pip install transformers torch pillow einops timm huggingface_hub
+pip install -r requirements.txt
 ```
 
 ### 4. Instalar stub de flash_attn (necesario en Windows y entornos CPU)
 
-Florence-2 declara `flash_attn` como dependencia, pero esta librería requiere compilación con CUDA y no funciona en CPU ni en Windows. Para evitar el error de instalación, se crea un paquete stub que satisface el import sin necesidad de instalación real:
+Florence-2 declara `flash_attn` como dependencia, pero esta librería requiere compilación con CUDA y no funciona en CPU ni en Windows. Para evitar el error de instalación, ejecuta este script que crea un paquete stub:
 
 ```bash
 python install_flash_attn_stub.py
 ```
 
 > **¿Por qué es necesario esto?** `transformers` realiza un análisis estático del código de Florence-2 antes de ejecutarlo y lanza un `ImportError` si no encuentra `flash_attn`, aunque el modelo se ejecute en modo `eager` (CPU) donde flash attention nunca se usa. El stub resuelve esto de forma limpia sin modificar los archivos del modelo.
+
+> **¿Tengo que repetirlo?** Solo si creas un nuevo entorno virtual. El stub queda instalado permanentemente en el venv actual.
 
 ### 5. Login en Hugging Face
 
@@ -92,17 +94,21 @@ export HUGGINGFACE_HUB_TOKEN="tu_token"
 
 ### Uso básico
 
+`--input-folder` es el único argumento obligatorio. Apunta a la carpeta con tus imágenes:
+
 ```bash
 python generate_captions.py --input-folder ./mi_dataset
 ```
 
 ### Con trigger word personalizado
 
+El trigger word es la palabra clave que se añade al inicio de cada caption y que usarás en tus prompts durante la inferencia. Cámbialo por el nombre de tu estilo:
+
 ```bash
 python generate_captions.py --input-folder ./mi_dataset --trigger-word "miEstilo"
 ```
 
-### Guardar captions en carpeta distinta a las imágenes
+### Guardar captions en una carpeta distinta
 
 ```bash
 python generate_captions.py --input-folder ./imagenes --output-folder ./captions
@@ -114,15 +120,21 @@ python generate_captions.py --input-folder ./imagenes --output-folder ./captions
 python generate_captions.py --input-folder ./mi_dataset --device cuda
 ```
 
-### Todos los parámetros disponibles
+### Ver todos los parámetros
 
-| Parámetro | Por defecto | Descripción |
-|---|---|---|
-| `--input-folder` | `./dataset_sao` | Carpeta con las imágenes a procesar |
-| `--output-folder` | misma que input | Carpeta donde guardar los `.txt` |
-| `--trigger-word` | `saoStyle` | Palabra clave al inicio de cada caption |
-| `--device` | auto-detectado | `cpu` o `cuda` |
-| `--extensions` | `.jpg,.jpeg,.png,.bmp,.webp` | Extensiones de imagen a procesar |
+```bash
+python generate_captions.py --help
+```
+
+### Referencia de parámetros
+
+| Parámetro | Obligatorio | Por defecto | Descripción |
+|---|---|---|---|
+| `--input-folder` | ✅ Sí | — | Carpeta con las imágenes a procesar |
+| `--output-folder` | No | misma que input | Carpeta donde guardar los `.txt` |
+| `--trigger-word` | No | `myStyle` | Palabra clave al inicio de cada caption |
+| `--device` | No | auto-detectado | `cpu` o `cuda` |
+| `--extensions` | No | `.jpg,.jpeg,.png,.bmp,.webp` | Extensiones de imagen a procesar |
 
 ---
 
@@ -140,8 +152,8 @@ florence2-caption-pipeline/
 
 ## Cómo funciona internamente
 
-1. **Descarga del modelo**: Florence-2-large (~1.5GB) se descarga automáticamente desde Hugging Face en la primera ejecución y se cachea localmente.
-2. **Carga del modelo**: Se carga con `attn_implementation="eager"` para compatibilidad total con CPU.
+1. **Descarga del modelo**: Florence-2-large (~1.5GB) se descarga automáticamente desde Hugging Face en la primera ejecución y se cachea localmente en `~/.cache/huggingface/florence2-large`.
+2. **Carga del modelo**: Se carga con `attn_implementation="eager"` para compatibilidad total con CPU y sin dependencias de compilación.
 3. **Generación de captions**: Para cada imagen se ejecuta Florence-2 con el task prompt `<MORE_DETAILED_CAPTION>`, que genera descripciones detalladas de escena, personajes, colores e iluminación.
 4. **Post-procesado**: Se añade el trigger word al inicio y se guarda el resultado en un archivo `.txt` con el mismo nombre que la imagen.
 
@@ -162,9 +174,9 @@ Para datasets grandes se recomienda encarecidamente usar GPU.
 
 | Sistema | Soporte |
 |---|---|
-| Windows 10/11 | ✅ (requiere stub flash_attn) |
+| Windows 10/11 | ✅ (requiere `install_flash_attn_stub.py`) |
 | Linux | ✅ |
-| macOS (Apple Silicon) | ✅ (device cpu) |
+| macOS (Apple Silicon) | ✅ |
 
 ---
 

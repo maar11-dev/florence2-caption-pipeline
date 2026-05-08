@@ -163,8 +163,8 @@ florence2-caption-pipeline/
 
 | Hardware | Tiempo por imagen |
 |---|---|
-| CPU (i5/i7 moderno) | 2–5 minutos |
-| GPU (RTX 3060+) | 5–15 segundos |
+| CPU (i5/i7 moderno) | 10 segundos |
+| GPU (RTX 3060+) | 2-3 segundos |
 
 Para datasets grandes se recomienda encarecidamente usar GPU.
 
